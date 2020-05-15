@@ -1,0 +1,177 @@
+# Project - Association Mining - Using apriori Algorithm
+#Load The Dataset
+df_lastfm=read.csv("E:/Projects/R/Data Science Project_1/Data Science Project_Association/lastfm.csv",header = T)
+head(df_lastfm)
+
+#check Structure Of the dataset
+dim(df_lastfm)
+colSums(is.na(df_lastfm))
+str(df_lastfm)
+
+#preprocessing
+#df_lastfm$X = NULL
+df_music=df_lastfm
+df_music$X.1 = NULL
+df_music$X.2 = NULL
+df_music$X.3 = NULL
+df_music$X.4 = NULL
+df_music$X.5 = NULL
+df_music$X.6 = NULL
+df_music$X.7 = NULL
+
+#Check for distribution of variables
+str(df_music)
+summary(df_music)
+
+#check for non missing values data
+complete.cases(df_music)
+
+#since the problem statement is to find out rules according to which we hav to recommend songs to users, we will convert them to factor
+df_music$user=as.factor(df_music$user)
+df_music$artist = as.factor(df_music$artist)
+
+# now the data is in long format with duplicate values in user, converting in wide format would help
+# to have 1 user has listened to how many artist
+#user here is transaction and artist are different items we can say
+
+#we will group them that all the users  with same id is 1 record and that record includes all the artist that 
+#the particular user listened to
+
+#using ddply from the plyr package
+#ddply(dataframe,"variables to be used to split the dataframe","function to be applied")
+
+#tr_muusic = ddply(df_music,c("user","artist"),function(df1)paste(df1$Item,collapse=","))
+
+
+playlist <- split(x=df_music[,"artist"],f=df_music$user) ## split into a list of users
+
+playlist <- lapply(playlist,unique) ## GROUP users and artist
+
+playlist[1:10]
+tail(playlist)
+
+
+#read the dataframe playlist into transactions
+playlist=as(playlist,"transactions")
+
+playlist
+#transactions in sparse format with
+#15000 transactions (rows) and
+#1004 items (columns)
+#15000 users and 1004 artists
+
+playlist[1:10]
+#10 transactions (rows) and
+#1004 items (columns)
+#this means 10 users and 1004 items or columns mean 1004 columns and each column will have a different artist name
+
+# now we will inspect the playlist as to which user listened to which artists
+inspect(playlist[1:3])
+
+#now we will check the frequency of items
+itemFrequency(playlist, type="absolute")
+
+#Plot the items to understand which item was sold most
+itemFrequencyPlot(playlist,type="absolute",topN=20,main="Most Artists Listened to By Users",support=0.08,col="Purple")
+
+#here we r using support percent as 8% so those transactiond which have support of 8% means the occurence of only those items which is 8% or more of total transactions
+
+#now we will check the relative frequency as an wrt to total artists
+itemFrequencyPlot(playlist,type="relative",topN=20,main="Most Artists Listened to By Users",support=0.08,col="Blue")
+
+
+# now build the model
+#model = apriori(playlist,parameter = list(support=0.08, confidence=0.2,maxlen=20)) 
+# support of 0.08 means we will generate rules and the items should be present in 1200 transactions 8% of 15000,
+there is a low possibility that every item will occur in 1200 transactions
+#So 0 rules were generated because not many items in the transations has support of 8%
+#so to get rules we need lower support values
+
+#confidence = 0.2 means the association or the probability that if one item is bouth than the second is also bought is 20%
+#maxlen = 20 means max length of items in a transaction should not be more than 20, if this is high and the dataset is long then
+algorithm has to read each transaction and compare each item with every other item to find the association between items and so algorithm will run slow
+
+#so to get rules we will resuce the support values and increase the probability of association that is confidence values
+musicrules=apriori(playlist,parameter = list(support=0.01,confidence=0.5,maxlen=30))
+# 50 rules are generated
+
+support - 1% which means items occurence of each item in the transaction list should be 1 percent. so most items can occur in 150 transactions
+confidence is 50% that means probability of association between elements is 50%
+
+set of 50 rules 
+> inspect(musicrules[1:50] )
+     lhs                                    rhs            support    confidence lift      count
+[1]  {t.i.}                              => {kanye west}   0.01040000 0.5672727   8.854413 156  
+[2]  {the pussycat dolls}                => {rihanna}      0.01040000 0.5777778  13.415893 156  
+[3]  {the fray}                          => {coldplay}     0.01126667 0.5168196   3.260006 169  
+[4]  {sonata arctica}                    => {nightwish}    0.01346667 0.5101010   8.236292 202  
+[5]  {judas priest}                      => {iron maiden}  0.01353333 0.5075000   8.562992 203  
+[6]  {the kinks}                         => {the beatles}  0.01360000 0.5298701   2.979030 204  
+[7]  {travis}                            => {coldplay}     0.01373333 0.5628415   3.550304 206  
+[8]  {the flaming lips}                  => {radiohead}    0.01306667 0.5297297   2.938589 196  
+[9]  {megadeth}                          => {metallica}    0.01626667 0.5281385   4.743759 244  
+[10] {simon & garfunkel}                 => {the beatles}  0.01540000 0.5238095   2.944956 231  
+[11] {broken social scene}               => {radiohead}    0.01506667 0.5472155   3.035589 226  
+[12] {blur}                              => {radiohead}    0.01753333 0.5228628   2.900496 263  
+[13] {keane}                             => {coldplay}     0.02226667 0.6374046   4.020634 334  
+[14] {snow patrol}                       => {coldplay}     0.02646667 0.5251323   3.312441 397  
+[15] {beck}                              => {radiohead}    0.02926667 0.5092807   2.825152 439  
+[16] {snow patrol,the killers}           => {coldplay}     0.01040000 0.5954198   3.755802 156  
+[17] {radiohead,snow patrol}             => {coldplay}     0.01006667 0.6344538   4.002021 151  
+[18] {death cab for cutie,the shins}     => {radiohead}    0.01006667 0.5033333   2.792160 151  
+[19] {the beatles,the shins}             => {radiohead}    0.01066667 0.5673759   3.147425 160  
+[20] {led zeppelin,the doors}            => {pink floyd}   0.01066667 0.5970149   5.689469 160  
+[21] {pink floyd,the doors}              => {led zeppelin} 0.01066667 0.5387205   6.802027 160  
+[22] {pink floyd,the doors}              => {the beatles}  0.01000000 0.5050505   2.839489 150  
+[23] {the beatles,the strokes}           => {radiohead}    0.01046667 0.5607143   3.110471 157  
+[24] {oasis,the killers}                 => {coldplay}     0.01113333 0.6626984   4.180183 167  
+[25] {oasis,the beatles}                 => {coldplay}     0.01060000 0.5196078   3.277594 159  
+[26] {oasis,radiohead}                   => {coldplay}     0.01273333 0.5876923   3.707058 191  
+[27] {beck,the beatles}                  => {radiohead}    0.01300000 0.5909091   3.277972 195  
+[28] {bob dylan,the rolling stones}      => {the beatles}  0.01146667 0.5910653   3.323081 172  
+[29] {david bowie,the rolling stones}    => {the beatles}  0.01000000 0.5703422   3.206572 150  
+[30] {led zeppelin,the rolling stones}   => {the beatles}  0.01066667 0.5776173   3.247474 160  
+[31] {radiohead,the rolling stones}      => {the beatles}  0.01060000 0.5638298   3.169958 159  
+[32] {coldplay,the smashing pumpkins}    => {radiohead}    0.01093333 0.6283525   3.485683 164  
+[33] {the beatles,the smashing pumpkins} => {radiohead}    0.01146667 0.6209386   3.444556 172  
+[34] {radiohead,u2}                      => {coldplay}     0.01140000 0.5213415   3.288529 171  
+[35] {coldplay,sigur rÃ³s}               => {radiohead}    0.01206667 0.5801282   3.218167 181  
+[36] {sigur rÃ³s,the beatles}            => {radiohead}    0.01046667 0.6434426   3.569393 157  
+[37] {bob dylan,pink floyd}              => {the beatles}  0.01033333 0.6150794   3.458092 155  
+[38] {bob dylan,radiohead}               => {the beatles}  0.01386667 0.5730028   3.221530 208  
+[39] {bloc party,the killers}            => {coldplay}     0.01106667 0.5236593   3.303150 166  
+[40] {david bowie,pink floyd}            => {the beatles}  0.01006667 0.5741445   3.227949 151  
+[41] {david bowie,radiohead}             => {the beatles}  0.01393333 0.5225000   2.937594 209  
+[42] {placebo,radiohead}                 => {muse}         0.01366667 0.5137845   4.504247 205  
+[43] {led zeppelin,radiohead}            => {the beatles}  0.01306667 0.5283019   2.970213 196  
+[44] {death cab for cutie,the killers}   => {coldplay}     0.01086667 0.5884477   3.711823 163  
+[45] {death cab for cutie,the beatles}   => {radiohead}    0.01246667 0.5013405   2.781105 187  
+[46] {muse,the killers}                  => {coldplay}     0.01513333 0.5089686   3.210483 227  
+[47] {red hot chili peppers,the killers} => {coldplay}     0.01086667 0.5093750   3.213047 163  
+[48] {the beatles,the killers}           => {coldplay}     0.01253333 0.5340909   3.368950 188  
+[49] {radiohead,the killers}             => {coldplay}     0.01506667 0.5243619   3.307582 226  
+[50] {muse,the beatles}                  => {radiohead}    0.01380000 0.5073529   2.814458 207 
+
+
+
+
+#include those rules whose lift is greater than 5
+inspect(sort(subset(musicrules,subset=lift>5),by="lift"))
+
+#most frequent item was radio head so we will check what people listened before
+#radio head and what after radio head
+
+before_radio = apriori(playlist,parameter=list(support=0.01,confidence=0.5), appearance = list(default="lhs",rhs="radiohead"))
+inspect(before_radio)
+after_radio=apriori(playlist,parameter=list(support=0.01,confidence=0.3), appearance = list(lhs="radiohead",default="rhs"))
+inspect(after_radio)
+
+#visualize the rules
+plot_music=musicrules[quality(musicrules)$confidence>0.5]
+plot(plot_music)
+
+
+
+
+
+
