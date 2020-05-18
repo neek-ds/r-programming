@@ -153,6 +153,8 @@ plot(gkmat2)
 #Null Deviance:	    14330 
 #Residual Deviance: 13450 	AIC: 13800
 
+
+#trying different variations to understand which variables significantly explain about the model
 #var2 = subset(hr_train,select = c(-city))
 #mod_2=glm(target~.,data = var2,family = 'binomial')
 #print(mod_2)
@@ -184,6 +186,7 @@ colnames(hr_train)
 #mod5=glm(target~.,data=var5,family='binomial')
 #summary(mod5)
 
+#----------------------------------------------------------------------------------------------------
 #since city and city development index is correlated we r using only city to avoid multicollinearity
 #as we have seen keeping both variables in model building city_development_index results in NA 
 #values in summary output moreover the null and residual deviance values doesnt change much
@@ -191,6 +194,7 @@ colnames(hr_train)
 
 #but when city is excluded the difference between null and residual deviance is not much
 #but when city_development_index is excluded the residual deviance is reduced
+#-----------------------------------------------------------------------------------------------------
 train_hr = var3
 dim(train_hr)
 
@@ -301,7 +305,8 @@ head(hr_pred)
 dim(hr_pred)
 res = ifelse(hr_pred > 0.5,1,0)
 
-
+#-------------------------------------------------------------------------------------------------------
+#----------------------generating final csv file----------------------------------------------------------
 #now concatenating the ID and target column together
 
 submission = data.frame(enrollee_id=1:length(hr_pred),res=res)
