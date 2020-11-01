@@ -1,0 +1,498 @@
+#Requirement: Build a predictive model to understand sales performance of a product.
+
+#Objective: Optimized inventory management for products. By predicting sales performance,
+#the inventory stock can be managed well and can help optimize stock vs sales.
+
+#---Loading the dataset-------
+all_data = read.csv(file.choose(),header = T,stringsAsFactors = F)
+
+#checking the dimensions in the dataset
+dim(all_data)  #1573 rows 43 columns
+
+#checking the structure
+str(all_data) #A datafram with 1573 Observations and 43 variables
+
+View(all_data)
+
+colnames(all_data)[apply(all_data,2, anyNA)]
+
+colSums(is.na(all_data))
+
+
+
+
+#---------#Data Preprocessing and Transformation------------
+
+#1.Reducing redundant columns
+
+#We are ignoring the title_in_french  column as the same is being translated to English
+#the next column
+
+wish_data = read.csv(file.choose(),header = T,stringsAsFactors = F)
+
+dim(wish_data) #1573 , 42
+
+#1. check for type of columns in the dataset
+
+str(wish_data) # column types consist of num,int and char values
+
+#---------Handling Missing Values----------------------
+#2.check for missing values in the dataset
+any(is.na(wish_data)) #TRUE
+
+#Find the missing values in all colmns
+sum(is.na(wish_data)) # total 3849 values are missing in the dataset 
+
+#cheking for missing values in individual columns
+colSums(is.na(wish_data))
+
+
+colnames(wish_data)[apply(wish_data, 2, anyNA)]
+
+#We have to remove the missing values so that the dataset does not have any missing data
+#which could be an important value
+class(wish_data$rating_five_count)
+head(wish_data$rating_five_count,20)
+sum(is.na(wish_data$rating_five_count))
+
+#45 records have missing values in rating_five_count and subsequently same records have
+#missing data for rating_four_count,rating_three_count,rating_two_count,rating_one_count
+
+#On observing the rating_count column is the sum of rating_five_count....rating_One_count 
+#so 45 records which are missing can be replaced by the value which is present in rating count
+#column that is 0
+
+wish_data$rating_five_count[is.na(wish_data$rating_five_count)] = 0
+wish_data$rating_four_count[is.na(wish_data$rating_four_count)] = 0
+wish_data$rating_three_count[is.na(wish_data$rating_three_count)] = 0
+wish_data$rating_two_count[is.na(wish_data$rating_two_count)] = 0
+wish_data$rating_one_count[is.na(wish_data$rating_one_count)] = 0
+
+#product color
+summary(wish_data$product_color)
+
+wish_data$product_color= factor(wish_data$product_color)
+levels(wish_data$product_color)
+p=table(wish_data$product_color)
+sort(p,decreasing = TRUE)
+#converting character column to factor
+wish_data$product_color=factor(wish_data$product_color)
+levels(wish_data$product_color)
+#Next column which is missing is has_urgency_banner
+#replacing NA's with most occuring  category that is black color
+wish_data$product_color[is.na(wish_data$product_color)]='black'
+
+colnames(wish_data)[apply(wish_data, 2, anyNA)]
+
+summary(wish_data$has_urgency_banner)
+# from the output it is shown that it 1100 missing values
+# the column can be important for understanding the stock for aproduct 
+#hence helping in understanding inventory
+#So deleting the column even though it has high % of missing values may lead to bad results
+
+# imputing the missing data by creating another category 'Missing'
+#coverting it to factor
+wish_data$has_urgency_banner=factor(wish_data$has_urgency_banner)
+plot(wish_data$has_urgency_banner)
+
+
+class(wish_data$urgency_text)
+#converting it to factor
+wish_data$urgency_text = factor(wish_data$urgency_text)
+plot(wish_data$urgency_text)
+summary(wish_data$urgency_text)
+#this column has enteries in french language replacing it to English would help
+levels(wish_data$urgency_text) #[1] "QuantitÃ© limitÃ©e !" "RÃ©duction sur les achats en gros"
+
+
+
+class(wish_data$product_variation_size_id)
+colSums(is.na(wish_data))
+colnames(wish_data)[apply(wish_data, 2, anyNA)]
+summary(wish_data$product_variation_size_id)
+#since this column is about the variation present for a particular and size matters we cannot 
+#replace it with the most occuring category hence introducing Unknown Category for NA's4
+wish_data$product_variation_size_id[is.na(wish_data$product_variation_size_id)] = 'Unknown'
+#converting character class variable to factor
+wish_data$product_variation_size_id = factor(wish_data$product_variation_size_id)
+levels(wish_data$product_variation_size_id)
+
+
+class(wish_data$origin_country)
+sum(is.na(wish_data$origin_country))
+wish_data$origin_country[is.na(wish_data$origin_country)]='Unknown'
+wish_data$origin_country=factor(wish_data$origin_country)
+levels(wish_data$origin_country)
+
+#Check for missing values again in the dataset
+any(is.na(wish_data))
+colSums(is.na(wish_data))
+#missing values from the dataset is handled
+
+#transformation is also done
+
+#----------------------------------------------------------------------
+#Exploratory Data Analysis
+
+#checking the plots and distributions
+
+#We have to find the sales performance of the product
+#target variable  - units_sold
+
+class(wish_data$units_sold)
+
+#chcking the distribution
+hist(wish_data$units_sold,col = 'steelblue',breaks=30)
+d=density(wish_data$units_sold)
+plot(d,col='blue',main = 'Density plot of units sold')
+mean(wish_data$units_sold)
+#the target variable seems to have positive skewness, as most of the data is less than mean
+#data values are concentrated towards the left part
+
+
+#Finding and removing skewness
+# to find the skew in data for target variable we will use moments Package
+#install.packages('moments')
+#library(moments)
+#skewness(log_u)
+log_u=log10(wish_data$units_sold)
+log_u
+sqrt_u=sqrt(wish_data$units_sold)
+sqrt_u
+#skewness(sqrt_u)
+#ds=density(sqrt_u)
+#plot(ds)
+
+dl=density(log_u)
+plot(dl)
+
+
+#finding correlations between variables
+
+#wish_data[,5]
+colnames(wish_data)
+
+
+str(wish_data)
+any(is.na(wish_data))
+
+#converting some character variables to factor
+#wish_data$badge_fast_shipping = factor(wish_data$badge_fast_shipping)
+#wish_data$badges_count = factor(wish_data$badges_count)
+#wish_data$badge_local_product =factor(wish_data$badge_local_product)
+#wish_data$badge_product_quality = factor(wish_data$badge_product_quality)
+
+#converting character data type to integer
+class(wish_data$rating_five_count)
+summary(wish_data$rating_five_count)
+wish_data$rating_five_count=as.numeric(wish_data$rating_five_count)
+wish_data$rating_five_count[is.na(wish_data$rating_five_count)] = 0
+wish_data$rating_four_count = as.numeric(wish_data$rating_four_count)
+wish_data$rating_four_count[is.na(wish_data$rating_four_count)] = 0
+wish_data$rating_three_count=as.numeric(wish_data$rating_three_count)
+wish_data$rating_three_count[is.na(wish_data$rating_three_count)] = 0
+wish_data$rating_two_count=as.numeric(wish_data$rating_two_count)
+wish_data$rating_two_count[is.na(wish_data$rating_two_count)] = 0
+wish_data$rating_one_count =as.numeric(wish_data$rating_one_count)
+wish_data$rating_one_count[is.na(wish_data$rating_one_count)] = 0
+str(wish_data)
+
+#sinxe the data set has la rge amount of factor variables with high levels we will use
+#stepwise regression in forward direction to get significant variables for model building
+
+colnames(wish_data)
+
+
+#since regression algorithm does not rake factor values which is less than 1 leve we will remove it
+df_wish = wish_data
+dim(df_wish)
+
+str(df_wish)
+#removing variables which has only one level
+df_wish$currency_buyer = NULL
+df_wish$theme = NULL
+df_wish$crawl_month = NULL
+df_wish$tags = NULL
+df_wish$title_translated = NULL
+
+
+#converting numerical variables to factor
+#df_wish$uses_ad_boosts = factor(df_wish$uses_ad_boosts)
+#df_wish$merchant_has_profile_picture = factor(df_wish$merchant_has_profile_picture)
+#df_wish$merchant_profile_picture = NULL
+#df_wish$product_picture = NULL
+
+dim(df_wish)
+
+#df_wish$shipping_is_express=factor(df_wish$shipping_is_express)
+#df_wish$shipping_option_name = factor(df_wish$shipping_option_name)
+#df_wish$product_url=NULL
+#df_wish$merchant_title = NULL
+#df_wish$product_variation_size_id = levels(df_wish$product_variation_size_id)[as.numeric(df_wish$product_variation_size_id)]
+#df_wish$product_color = levels(df_wish$product_color)[as.numeric(df_wish$product_color)]
+
+str(df_wish)
+names(df_wish)
+
+df_wish[2:15] = lapply(df_wish[2:15],as.numeric)
+df_wish[17:18] = lapply(df_wish[17:18],as.numeric)
+df_wish[20:23] = lapply(df_wish[20:23],as.numeric)
+df_wish[30:31] = lapply(df_wish[30:31],as.numeric)
+df_wish[33] = lapply(df_wish[33],as.numeric)
+df_wish$has_urgency_banner = as.numeric(df_wish$has_urgency_banner)
+is.na(df_wish$has_urgency_banner)
+
+#segregating numeric columns
+install.packages('dplyr')
+library('dplyr')
+
+wish_num = select_if(df_wish,is.numeric)
+wish_fac = select_if(df_wish,is.character)
+
+
+dim(wish_num)
+str(wish_num)
+colnames(wish_num)
+
+#feature selection by creating different models 
+
+full_1 = lm(units_sold~.,data=wish_num)
+null_1 = lm(units_sold~1,data=df_wish)
+lm1 = step(null_1,scope = list(lower=null_1,upper=full_1),direction = 'forward')
+summary(lm1)
+library(carData)
+library(car)
+vif(lm1)
+
+str(wish_fac)
+str(wish_num)
+summary(lm1) # R-squared = 0.822 Adj-R-Squared = 0.8209 F-stats = 721.5 on 10
+
+mod2 = lm(units_sold~.,data=wish_num)
+summary(mod2) # R-Squared = 0.8227 Adj R Squared = 0.8203, F-stats = 342.7 on 21
+is.na(wish_num)
+colSums(is.na(wish_num))
+
+wish_num$has_urgency_banner = df_wish$has_urgency_banner
+
+mod3= lm(units_sold~.,data=wish_num)
+summary(mod3) # R-sq=0.8231 adj R-sq = 0.8206 , f Stats =327.8 on 22 df
+
+#so lets try one more model with significant variables according to the p-value
+mod4=lm(units_sold~retail_price+uses_ad_boosts+rating_four_count+rating_three_count+badges_count+
+          badge_local_product+badge_product_quality+product_variation_size_id+countries_shipped_to+
+          merchant_rating_count,data=wish_num)
+summary(mod4)#R-sq = 0.8138, adj R sq = 0.8126 F stats =682.5 on 10 df
+
+mod5=lm(units_sold~retail_price+uses_ad_boosts+rating_four_count+badges_count+
+          badge_local_product+badge_product_quality+product_variation_size_id+countries_shipped_to+
+          merchant_rating_count,data=wish_num)
+summary(mod5)#R-squared:  0.8021 #Adjusted R-squared:  0.8009 703.8 on 9 df
+
+#Since the target variable is continuous in nature we will proceed with Linear regression algorithm
+
+#Assumptions
+
+#1. Linear relationship between the predictors
+#find correlations between the numeric variables
+library(corrplot)
+corwish = cor(wish_num)
+corrplot(corwish,tl.cex = 0.6)
+
+#2. Data should be normally distributed
+#Shapiro_wilk normality test
+#install.packages('rstatix')
+#library('rstatix')
+
+shapiro.test(wish_num$units_sold)
+shapiro.test(log_u)
+shapiro.test(sqrt_u)
+ds = density(wish_num$units_sold)
+plot(ds,col='steelblue',main='Density Plot For Units sold')
+
+du=density(log_u)
+plot(du,col='steelblue', main='Transformed Density Plot Of units Sold')
+wish_num$target = log_u
+dim(wish_num)
+
+mod6= lm(target~.,data=wish_num)
+summary(mod6)
+
+shapiro.test(wish_num$listed_price)
+shapiro.test(wish_num$retail_price)
+shapiro.test(wish_num$uses_ad_boosts)
+shapiro.test(wish_num$rating)
+shapiro.test(wish_num$rating_count)
+shapiro.test(wish_num$badges_count)
+shapiro.test(wish_num$badge_local_product)
+shapiro.test(wish_num$badge_product_quality)
+shapiro.test(wish_num$product_variation_inventory)
+shapiro.test(wish_num$merchant_rating)
+
+library(car)
+library(caret)
+library(ggplot2)
+library(lattice)
+library(ggpubr)
+library(magrittr)
+
+#Density Plot
+ggdensity(wish_num$target,fill='steelblue')
+ggqqplot(wish_num$target)
+
+#checking the plots for independent variables
+scatterplot(wish_num$retail_price,wish_num$target)
+re=log10(wish_num$retail_price)
+scatterplot(re,wish_num$target)
+
+scatterplot(wish_num$uses_ad_boosts,wish_num$target)
+ad_b=log10(wish_num$uses_ad_boosts)
+scatterplot(ad_b,wish_num$target)
+
+scatterplot(wish_num$rating,wish_num$target)
+rat=log10(wish_num$rating)
+scatterplot(rat,wish_num$target)
+
+summary(mod3)
+
+
+# Test of linearity
+residualPlot(mod3) # less random , more pattern
+residualPlot(mod6) # more random
+
+summary(mod6)
+boxplot(wish_num$target)
+
+#test of multicollinearity
+library(carData)
+vif(mod3) #Error in vif.default(mod3) : there are aliased coefficients in the model
+alias(mod3)
+
+wish_num1 = subset(wish_num,select = c(-rating_one_count,-rating_two_count,-rating_three_count,
+                                       -rating_four_count,-rating_five_count,
+                                       -badge_fast_shipping,-badges_count))
+wish_n = subset(wish_num1,select = c(-target))
+
+mod_3 = lm(units_sold~.,data=wish_num1)
+summary(mod_3)#Multiple R-squared:  0.8383,	Adjusted R-squared:  0.8359 
+#F-statistic: 349.2 on 23 and 1549 DF,  p-value: < 2.2e-16
+vif(mod_3)
+
+mod_3.1 = lm(units_sold~.,data=wish_num1)
+summary(mod_3.1)#Multiple R-squared:  0.8382,	Adjusted R-squared:  0.8359 
+#F-statistic:   365 on 22 and 1550 DF,  p-value: < 2.2e-16
+
+mod_3.2=lm(units_sold~.,data=wish_num1)
+summary(mod_3.2)#Multiple R-squared:  0.8286,	Adjusted R-squared:  0.8265 
+#F-statistic: 395.2 on 19 and 1553 DF,  p-value: < 2.2e-16
+vif(mod_3.2)
+
+mod_3.3 = lm(units_sold~.,data=wish_num1)
+summary(mod_3.3)#Multiple R-squared:  0.8277,	Adjusted R-squared:  0.8257 
+#F-statistic: 414.8 on 18 and 1554 DF,  p-value: < 2.2e-16
+vif(mod_3.3)
+residualPlot(mod_3.3)
+#mod_3.3 ha variables with no multicollinearity we can consider the variable sets for model building
+
+mod_3.4 = lm(units_sold~.,data=wish_n)
+summary(mod_3.4)
+vif(mod_3.4)
+residualPlot(mod_3.4)
+#-------------------------------------------------------------------------------------
+#model building
+
+#split the dataset into train data and test data
+#train will contain 75% of data while test will contain 25% of the data
+
+dim(s)
+names(wish_n)
+
+
+index=createDataPartition(wish_n$units_sold,p=0.8,list=F)
+
+train_wish = wish_n[index,]
+test_wish = wish_n[-index,]
+
+dim(train_wish)# 1260 18
+dim(test_wish) #313 18
+
+lm_wish = lm(units_sold~.,data=train_wish)
+summary(lm_wish)#Multiple R-squared:  0.8188,	Adjusted R-squared:  0.8163 
+#F-statistic: 330.1 on 17 and 1242 DF,  p-value: < 2.2e-16
+
+
+#Check for linear relationship between variables
+residualPlot(lm_wish) # scattered around 0
+
+#predicting Units sold on training data
+train_wish$pred = fitted(lm_wish)
+#head(train_wish$pred)
+
+#Find residuals of the training data
+train_wish$res = residuals(lm_wish)
+head(train_wish$res)
+
+#calculate the Root mean squared error(RMSE) 
+train_wish_rmse = sqrt(mean(train_wish$res**2))
+train_wish_rmse #4110.67
+
+
+#2.Checking for no autocorrelation between the residuals
+#null hypothesis - no correlation among residuals
+#alternate hypothesis - Residuals autocorrelated
+durbinWatsonTest(lm_wish)
+#lag Autocorrelation D-W Statistic p-value
+#1      0.03661406       1.92668   0.166
+#since the p value is more than 0.05 we fail to reject the null hypothesis
+# so residuals are not correlated
+
+#3. Check for multicollinearity
+vif(lm_wish)
+# all the variables have vif<5 so no multicollinearity exists in the model
+
+
+#4. Non Constant Variance in error terms -  Heteroskedasticity Test
+#heteroscadestic data test
+#h0 - data is homoscadestic
+#h1 = data is not homoscadestic
+ncvTest(model = lm_wish,var.formula = ~.)
+#Variance formula: ~ . 
+#Chisquare = 14629.17, Df = 18, p = < 2.22e-16
+#since p-value is less than 0.05 we can reject null hypothesis and say 
+#data is heteroskedastic
+
+#5. Errors are normally distributed
+qqPlot(train_wish$res)
+hist(train_wish$res)
+#errors are close to normal distribution but not perfectly show normal-distribution
+#-----------------------------------------------------------------------------
+
+#Predicting On Test Data
+test_wish$pred = predict(lm_wish,test_wish)
+head(test_wish$pred)
+
+#calculating residuals on test data
+test_wish$res = test_wish$units_sold - test_wish$pred
+head(test_wish$res)
+hist(test_wish$res)
+
+#calculating root mean suared error on test data set
+test_wish_rmse = sqrt(mean(test_wish$res**2))
+test_wish_rmse #3703.975
+
+#the rmse of test data should be less than the training data and since the goal of the 
+#algorithm is to have negligible error or no error between our predictions.
+#since the rmse score for test is less than train we can say that model is a good fit
+#and can be used for predictions
+
+#the final multiple linear regression equation becomes - 
+
+#units_sold = 3361 + 69.91*listed_price +(-15.96)*retail_price +558.8*uses_ad_boosts
+#       +(-53.73)*rating + 4.431*rating_count+(-232.9)*badge_local_product
+#       +(-823.9)*badge_product_quality + (-13.77)*product_variation_size_id
+#       +5.665*product_variation_inventory +(-449.3)*shipping_option_price
+#       +871.6*shipping_is_express + (-11.76)*countries_shipped_to + (-10.69)*inventory_total
+#       + 0.005749 * merchant_rating_count + (-312.1)*merchant_rating
+#       + 184.9 *merchant_has_profile_picture + 423.2*has_urgency_banner
+
+colnames(wish_data)[lapply(wish_data, anyNA)]
